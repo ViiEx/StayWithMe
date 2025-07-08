@@ -1,103 +1,174 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import ReactPlayer from "react-player";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Maximize, Minimize, Play } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [videoUrl, setVideoUrl] = useState(
+    "https://www.youtube.com/watch?v=nuU2YHtxMik"
+  ); // Default video URL
+  const [inputValue, setInputValue] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasSeeked, setHasSeeked] = useState(false);
+  const playerRef = useRef<HTMLVideoElement | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Extract video URL from YouTube URL or ID
+  const getVideoUrl = (input: string) => {
+    // If it's already a full URL, return it
+    if (input.includes("youtube.com") || input.includes("youtu.be")) {
+      return input;
+    }
+    // If it's just an ID, construct the URL
+    return `https://www.youtube.com/watch?v=${input}`;
+  };
+
+  const handleVideoChange = () => {
+    if (inputValue) {
+      const url = getVideoUrl(inputValue);
+      setVideoUrl(url);
+      setInputValue("");
+      setHasSeeked(false); // Reset seek state for new video
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Reset seek state when video changes
+  useEffect(() => {
+    setHasSeeked(false);
+  }, [videoUrl]);
+
+  // Handle when the player is ready - seek to 53 seconds
+  const handleReady = () => {
+    console.log("onReady");
+    if (playerRef.current && !hasSeeked) {
+      playerRef.current.currentTime = 53; // Set to 53 seconds
+      setHasSeeked(true);
+    }
+  };
+
+  // Handle when the player starts playing
+  const handleStart = () => {
+    console.log("onStart");
+    if (playerRef.current && !hasSeeked) {
+      playerRef.current.currentTime = 53; // Set to 53 seconds
+      setHasSeeked(true);
+    }
+  };
+
+  // Callback to set the player ref
+  const setPlayerRef = (player: HTMLVideoElement | null) => {
+    playerRef.current = player;
+    if (player && !hasSeeked) {
+      // Set initial time to 53 seconds
+      setTimeout(() => {
+        if (player.duration && player.duration > 53) {
+          player.currentTime = 53;
+          setHasSeeked(true);
+        }
+      }, 500);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col">
+      {/* Controls - Hidden by default, visible on hover */}
+      {/* <div className="group fixed w-full h-[50px] top-0 z-10">
+        {!isFullscreen && (
+          <div className="absolute top-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm p-6 flex flex-col sm:flex-row gap-4 items-center justify-center border-b border-gray-800 transform -translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out">
+            <div className="flex gap-3 items-center max-w-md w-full">
+              <Input
+                type="text"
+                placeholder="Enter YouTube URL or Video ID"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleVideoChange()}
+                className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400 focus:border-red-500"
+              />
+              <Button
+                onClick={handleVideoChange}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                size="default"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Load
+              </Button>
+            </div>
+            <Button
+              onClick={toggleFullscreen}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+              size="default"
+            >
+              <Maximize className="w-4 h-4 mr-2" />
+              Enter Fullscreen
+            </Button>
+          </div>
+        )}
+      </div> */}
+
+      {/* Video Player */}
+      <div className="flex-1 relative">
+        <div className="absolute inset-0">
+          <ReactPlayer
+            ref={setPlayerRef}
+            src={videoUrl}
+            width="100%"
+            height="100%"
+            playing={true}
+            controls={false}
+            onReady={handleReady}
+            onStart={handleStart}
+            config={{
+              youtube: {
+                playerVars: {
+                  autoplay: 1,
+                  controls: 0,
+                  disablekb: 1,
+                  fs: 0,
+                  modestbranding: 1,
+                  rel: 0,
+                  showinfo: 0,
+                },
+              },
+            }}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Fullscreen exit button */}
+        {isFullscreen && (
+          <Button
+            onClick={toggleFullscreen}
+            variant="secondary"
+            className="absolute top-4 right-4 z-10 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white border-gray-600"
+            size="sm"
+          >
+            <Minimize className="w-4 h-4 mr-2" />
+            Exit Fullscreen
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
